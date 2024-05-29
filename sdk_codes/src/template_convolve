@@ -1,0 +1,49 @@
+// CONVOLUTION LAYER STARTS
+	{
+		mode_type mode;
+			//	mode.mode=mode_OCC;
+			mode.mode=mode_ICQ;
+			mode.LSB=0.56;
+			mode.LC=-16.9;
+			mode.k=0.5222E-6;
+			mode.slopecorrect=0.7945;
+			mode.slopecorrect_chip=0.77*0.86;
+			mode.slopecorrect_XADC=0.55;
+	    // method1: batched (starts)
+			int mini_batch_size_lim=8;//mini batch size search
+			int mini_batch_size=( X_Batch > mini_batch_size_lim ? mini_batch_size_lim : X_Batch );
+		for( int b=0; b<X_Batch; b+=mini_batch_size ){
+		currObj = convolve(&X_Mat[b],mini_batch_size,X_Channels,X_Height,X_Width,X_Padding[Layer_ID][0],X_Stride[Layer_ID][0],W_Mat,W_Batch[Layer_ID],W_Channels[Layer_ID],W_Height[Layer_ID],W_Width[Layer_ID],
+			W_Padding, W_Stride, WordLines[Layer_ID], XDL, XBL, WDL, WBL, IMC, Bias,Ref,RefB,RefMax,&CNV_Out1[b],mode,slopeSetting,currObj);
+		// ADDED BY ASHWIN STARTS
+		// TO INDICATE TO MATLAB THAT THE CODE HAS ARRIVED AT END OF CONVOLVE
+		{
+			u8 syncdata=0;
+			// UART ADDED CODE STARTS HERE
+			uint16_t returnWords[]={convolvelinear_end_word};
+			if( b + mini_batch_size >= X_Batch ){
+			         returnWords[0]=convolvelinear_batchend_word;//0 is stride
+			}
+			int numWords=sizeof(returnWords)/sizeof(returnWords[0]);
+			sendWordData( returnWords, numWords, myUart ) ;
+			// UART ADDED CODE ENDS HERE
+			// WAITING FOR SYNC DATA FROM MATLAB
+			do
+			{
+				u32 receivedBytes2 = XUartPs_Recv(&myUart,&syncdata,1);// Non-Blocking
+			}while(syncdata!=syncdata_val);
+		}}
+		// ADDED BY ASHWIN ENDS
+		// method1: batched (ends)
+		// method2: all at once (starts)
+//	currObj = convolve_NotOnChip(X_Mat,X_Batch,X_Channels,X_Height,X_Width,X_Padding[Layer_ID][0],X_Stride[Layer_ID][0],W_Mat,W_Batch[Layer_ID],W_Channels[Layer_ID],W_Height[Layer_ID],W_Width[Layer_ID],
+//					W_Padding, W_Stride, WordLines[Layer_ID], XDL, XBL, WDL, WBL, IMC, Bias,Ref,RefB,RefMax,CNV_Out1,currObj);
+	}
+// CONVOLUTION LAYER ENDS
+	// ADDED BY ASHWIN STARTS HERE (TO INDICATE TO MATLAB THAT THERE ARE SOME LAYERS LEFT)
+	{
+		uint16_t returnWords[]={layers_continue_word};
+		int numWords=sizeof(returnWords)/sizeof(returnWords[0]);
+		sendWordData( returnWords, numWords, myUart ) ;
+	}
+	// ADDED BY ASHWIN ENDS HERE (TO INDICATE TO MATLAB THAT THERE ARE SOME LAYERS LEFT)

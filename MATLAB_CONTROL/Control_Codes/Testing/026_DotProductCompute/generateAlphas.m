@@ -1,0 +1,10 @@
+%generateAlphas
+%IMC_RBL_ReadStacks
+load('D:\Xilinx\Vivado_2018_Projs\IMC_CHIP_2023\PCB_v1\MATLAB_CONTROL\Control_Codes\Testing\017_ReadStackAlphaMeasurement\IMC_RBL_ReadStacks.mat');
+%RefIMC_RBL_ReadStacks
+load('D:\Xilinx\Vivado_2018_Projs\IMC_CHIP_2023\PCB_v1\MATLAB_CONTROL\Control_Codes\Testing\017_ReadStackAlphaMeasurement\RefIMC_RBL_ReadStacks.mat');
+alpha_DLs=(IMC_RBL_ReadStacks)/mean(IMC_RBL_ReadStacks,'all');
+alpha_RLs=(RefIMC_RBL_ReadStacks)/mean(RefIMC_RBL_ReadStacks,'all');
+alpha_DLStore=reshape(alpha_DLs,72,1024);alpha_DLStore=alpha_DLStore';
+alpha_RLStore=reshape(alpha_RLs,16,1024);alpha_RLStore=alpha_RLStore';
+save('./alphaStored/alphas.mat','alpha_DLStore','alpha_RLStore');

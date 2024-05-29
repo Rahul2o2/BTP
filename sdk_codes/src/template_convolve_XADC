@@ -1,0 +1,159 @@
+	// Write out the layer input starts
+	{
+		int _b=X_BitMat_Batch1;
+		int _c=W_BitMat_Batch1;
+		int _h=X_out_h1;
+		int _w=X_out_w1;
+
+		float D_see[_b][_c][_h][_w] ;
+			for(uint16_t b = 0; b < _b; b++){
+				for(uint16_t c = 0; c < _c; c++){
+					for(uint16_t h = 0; h < _h; h++){
+						for(uint16_t w = 0; w < _w; w++){
+							D_see[b][c][h][w]=CNV_Out1[b][c][h][w];
+						}
+					}
+				}
+			}
+			{
+			char FileName_outI[]="LX.bin";
+			u32 size=_b*_c*_h*_w*sizeof(D_see[0][0][0][0]);
+			u32 SourceAddress;
+
+
+				float size_params[]={_b,_c,_h,_w};
+				int size_params_size=sizeof( size_params ) ;
+				FRESULT rc=WriteFile_custom(FileName_outI, size_params_size, size_params);
+						rc=WriteFile_fseekappend(FileName_outI, size, D_see);
+			}
+	}
+	// Write out the layer input ends
+
+	// Write out the layer weight starts
+	{
+		int _b=W_Batch[Layer_ID];
+		int _c=W_Channels[Layer_ID];
+		int _h=W_Height[Layer_ID];
+		int _w=W_Width[Layer_ID];
+
+		float D_see[_b][_c][_h][_w] ;
+			for(uint16_t b = 0; b < _b; b++){
+				for(uint16_t c = 0; c < _c; c++){
+					for(uint16_t h = 0; h < _h; h++){
+						for(uint16_t w = 0; w < _w; w++){
+							D_see[b][c][h][w]=W_Mat[b][c][h][w];
+						}
+					}
+				}
+			}
+			{
+			char FileName_outI[]="LW.bin";
+			u32 size=_b*_c*_h*_w*sizeof(D_see[0][0][0][0]);
+			u32 SourceAddress;
+
+
+				float size_params[]={_b,_c,_h,_w};
+				int size_params_size=sizeof( size_params ) ;
+				FRESULT rc=WriteFile_custom(FileName_outI, size_params_size, size_params);
+						rc=WriteFile_fseekappend(FileName_outI, size, D_see);
+			}
+	}
+	// Write out the layer weight ends
+
+	// Write out the layer bias starts
+	{
+		int _b=W_Batch[Layer_ID];
+
+		float D_see[_b] ;
+			for(uint16_t b = 0; b < _b; b++){
+				D_see[b]=Bias[b];
+			}
+			{
+			char FileName_outI[]="LB.bin";
+			u32 size=_b*sizeof(D_see[0]);
+			u32 SourceAddress;
+
+
+				float size_params[]={_b};
+				int size_params_size=sizeof( size_params ) ;
+				FRESULT rc=WriteFile_custom(FileName_outI, size_params_size, size_params);
+						rc=WriteFile_fseekappend(FileName_outI, size, D_see);
+			}
+	}
+	// Write out the layer bias ends
+	// CONVOLUTION LAYER STARTS
+	{
+			mode_type mode;
+				//	mode.mode=mode_OCC;
+				mode.mode=mode_ICQ;
+				mode.LSB=0.56;
+				mode.LC=-16.9;
+				mode.k=0.5222E-6;
+				mode.slopecorrect=0.7945;
+				mode.slopecorrect_chip=0.86;
+				mode.slopecorrect_XADC=0.55;
+		    // method1: batched (starts)
+				int mini_batch_size_lim=X_Batch;//mini batch size search
+				int mini_batch_size=( X_Batch > mini_batch_size_lim ? mini_batch_size_lim : X_Batch );
+			for( int b=0; b<X_Batch; b+=mini_batch_size ){
+			currObj = convolve_XADC(&CNV_Out1[b],mini_batch_size,W_Batch[Layer_ID - 1],X_out_h1         ,X_out_w1,X_Padding[Layer_ID][0],X_Stride[Layer_ID][0],W_Mat,W_Batch[Layer_ID],W_Channels[Layer_ID],W_Height[Layer_ID],W_Width[Layer_ID],
+					W_Padding, W_Stride, WordLines[Layer_ID], XDL, XBL, WDL, WBL, IMC, Bias,Ref,RefB,RefMax,&CNV_Out2[b],mode,slopeSetting,currObj);
+			// ADDED BY ASHWIN STARTS
+			// TO INDICATE TO MATLAB THAT THE CODE HAS ARRIVED AT END OF CONVOLVE
+			{
+				u8 syncdata=0;
+				// UART ADDED CODE STARTS HERE
+				uint16_t returnWords[]={convolvelinear_end_word};
+				if( b + mini_batch_size >= X_Batch ){
+				         returnWords[0]=convolvelinear_batchend_word;//0 is stride
+				}
+				int numWords=sizeof(returnWords)/sizeof(returnWords[0]);
+				sendWordData( returnWords, numWords, myUart ) ;
+				// UART ADDED CODE ENDS HERE
+				// WAITING FOR SYNC DATA FROM MATLAB
+				do
+				{
+					u32 receivedBytes2 = XUartPs_Recv(&myUart,&syncdata,1);// Non-Blocking
+				}while(syncdata!=syncdata_val);
+			}}
+			// ADDED BY ASHWIN ENDS
+			// method1: batched (ends)
+	}
+	// CONVOLUTION LAYER ENDS
+	// Write out the layer output starts
+	{
+		int _b=X_BitMat_Batch2;
+		int _c=W_BitMat_Batch2;
+		int _h=X_out_h2;
+		int _w=X_out_w2;
+
+		float D_see[_b][_c][_h][_w] ;
+			for(uint16_t b = 0; b < _b; b++){
+				for(uint16_t c = 0; c < _c; c++){
+					for(uint16_t h = 0; h < _h; h++){
+						for(uint16_t w = 0; w < _w; w++){
+							D_see[b][c][h][w]=CNV_Out2[b][c][h][w];
+						}
+					}
+				}
+			}
+			{
+			char FileName_outI[]="LO.bin";
+			u32 size=_b*_c*_h*_w*sizeof(D_see[0][0][0][0]);
+			u32 SourceAddress;
+
+
+				float size_params[]={_b,_c,_h,_w};
+				int size_params_size=sizeof( size_params ) ;
+				FRESULT rc=WriteFile_custom(FileName_outI, size_params_size, size_params);
+						rc=WriteFile_fseekappend(FileName_outI, size, D_see);
+			}
+	}
+	// Write out the layer output ends
+	Status=SD_Eject(&fatfs); // SEARCH FOR THIS, ENDS HERE
+	// ADDED BY ASHWIN STARTS HERE (TO INDICATE TO MATLAB THAT ALL THE LAYERS ARE DONE )
+	{
+		uint16_t returnWords[]={layers_end_word};
+		int numWords=sizeof(returnWords)/sizeof(returnWords[0]);
+		sendWordData( returnWords, numWords, myUart ) ;
+	}
